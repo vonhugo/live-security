@@ -1,0 +1,48 @@
+services:
+  security_app:
+    container_name: security_app
+    image: vonhugo/live-security:0.0.1
+    build: . # dureccion donde esta el docketfile
+    mem_limit: 512m
+    ports:
+      - 8080:8080
+    environment:
+      - DATABASE_URL=jdbc:postgresql://security_db:5432/live
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=postgres
+      - APPLICATION_NAME=security_app
+    restart: always
+    depends_on:
+      security_db:
+          condition: service_healthy
+    volumes:
+          - app_logs:/var/logs/security_app  # Montar el volumen en el contenedor
+    networks:
+      - spring-network
+
+  security_db:
+    container_name: security_db
+    image: postgres:17.4-alpine
+    shm_size: 4gb
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: live
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+          - spring-network
+networks:
+  spring-network:
+
+volumes:
+  pgdata: {} # Volumen para la base de datos
+  app_logs: {}  # Volumen para los logs de security_app
