@@ -7,18 +7,23 @@ services:
     ports:
       - 8080:8080
     environment:
-      - DATABASE_URL=jdbc:postgresql://security_db:5432/live
-      - DATABASE_USERNAME=postgres
-      - DATABASE_PASSWORD=postgres
+      - DATABASE_URL=jdbc:postgresql://security_db:5432/${DB_NAME}
+      - DATABASE_USERNAME=${DB_USER}
+      - DATABASE_PASSWORD=${DB_PASSWORD}
       - APPLICATION_NAME=security_app
-    restart: always
+    restart: unless-stopped  # Evita reinicios infinitos
     depends_on:
       security_db:
-          condition: service_healthy
+        condition: service_healthy
     volumes:
-          - app_logs:/var/logs/security_app  # Montar el volumen en el contenedor
+      - pglogs:/var/logs/security_app  # Montar el volumen en el contenedor
     networks:
       - spring-network
+    logging:  # Rotación de logs
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 6
 
   security_db:
     container_name: security_db
@@ -27,9 +32,9 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: live
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d live"]
@@ -39,10 +44,10 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-          - spring-network
+      - spring-network
 networks:
   spring-network:
 
 volumes:
   pgdata: {} # Volumen para la base de datos
-  app_logs: {}  # Volumen para los logs de security_app
+  pglogs: {}  # Volumen para los logs de security_app
